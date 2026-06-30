@@ -2,14 +2,17 @@
 
 let currentImageData = null;
 let resultData = null;
+let resultImageData = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
     
     // کلیک روی باکس آپلود
-    dropZone.addEventListener('click', function() {
-        fileInput.click();
+    dropZone.addEventListener('click', function(e) {
+        if (e.target === this || e.target.closest('.upload-area')) {
+            fileInput.click();
+        }
     });
     
     // کشیدن و رها کردن
@@ -49,14 +52,21 @@ function handleFile(file) {
         return;
     }
     
-    // محدودیت حجم (10MB)
-    if (file.size > 10 * 1024 * 1024) {
-        showError('حجم تصویر نباید بیشتر از 10MB باشد!');
+    // محدودیت حجم (16MB)
+    if (file.size > 16 * 1024 * 1024) {
+        showError('حجم تصویر نباید بیشتر از 16MB باشد!');
         return;
     }
     
     // ذخیره داده
     currentImageData = file;
+    
+    // نمایش اطلاعات فایل
+    const fileInfo = document.getElementById('fileInfo');
+    fileInfo.innerHTML = `
+        <i class="fas fa-check-circle"></i>
+        ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)
+    `;
     
     // نمایش پیش‌نمایش
     const reader = new FileReader();
@@ -64,6 +74,15 @@ function handleFile(file) {
         document.getElementById('originalImage').src = e.target.result;
         document.getElementById('previewSection').style.display = 'block';
         document.getElementById('resultSection').style.display = 'none';
+        document.getElementById('loadingSection').style.display = 'none';
+        
+        // اطلاعات تصویر
+        const img = new Image();
+        img.onload = function() {
+            document.getElementById('imageInfoText').textContent = 
+                `${img.width} × ${img.height} پیکسل`;
+        };
+        img.src = e.target.result;
         
         // اسکرول به بخش پیش‌نمایش
         document.getElementById('previewSection').scrollIntoView({ behavior: 'smooth' });
@@ -99,8 +118,8 @@ async function detectTumor() {
         
         const result = await response.json();
         
-        if (result.error) {
-            showError(result.error);
+        if (!result.success) {
+            showError(result.error || 'خطا در تشخیص');
             return;
         }
         
@@ -121,39 +140,48 @@ async function detectTumor() {
 function displayResult(result) {
     resultData = result;
     
+    // زمان
+    document.getElementById('resultTime').textContent = 
+        new Date().toLocaleTimeString('fa-IR');
+    
     // نمایش تصویر خروجی
     if (result.output_image) {
-        document.getElementById('resultImage').src = result.output_image;
+        resultImageData = result.output_image;
+        document.getElementById('resultImage').src = 
+            `data:image/jpeg;base64,${result.output_image}`;
     }
     
     // نمایش جزئیات
-    const detailsDiv = document.getElementById('resultDetails');
-    detailsDiv.innerHTML = '';
+    const listDiv = document.getElementById('detectionsList');
+    listDiv.innerHTML = '';
     
     if (result.detections && result.detections.length > 0) {
         result.detections.forEach(detection => {
             const item = document.createElement('div');
             item.className = 'detection-item';
             
-            const confidenceClass = detection.confidence > 0.8 ? '' : (detection.confidence > 0.5 ? 'medium' : 'low');
+            const confidenceClass = detection.confidence > 80 ? '' : 
+                                  (detection.confidence > 50 ? 'medium' : 'low');
             
             item.innerHTML = `
                 <div class="class-name">${detection.class}</div>
                 <div class="confidence ${confidenceClass}">
-                    دقت: ${(detection.confidence * 100).toFixed(1)}%
+                    دقت: ${detection.confidence}%
                 </div>
-                <div style="font-size:0.8em;color:#718096;margin-top:5px;">
-                    موقعیت: [${detection.bbox[0]}, ${detection.bbox[1]}, ${detection.bbox[2]}, ${detection.bbox[3]}]
+                <div class="bbox-info">
+                    موقعیت: [${detection.bbox[0]}, ${detection.bbox[1]}, 
+                    ${detection.bbox[2]}, ${detection.bbox[3]}]
                 </div>
             `;
             
-            detailsDiv.appendChild(item);
+            listDiv.appendChild(item);
         });
     } else {
-        detailsDiv.innerHTML = `
-            <div class="detection-item" style="border-right-color:#fc8181;">
-                <div class="class-name">هیچ توموری تشخیص داده نشد</div>
-                <div style="color:#718096;margin-top:5px;">تصویر سالم است</div>
+        listDiv.innerHTML = `
+            <div class="no-detection">
+                <i class="fas fa-check-circle"></i>
+                <h4>هیچ توموری تشخیص داده نشد</h4>
+                <p>تصویر سالم است</p>
             </div>
         `;
     }
@@ -165,16 +193,17 @@ function displayResult(result) {
 
 // دانلود نتیجه
 function downloadResult() {
-    if (!resultData || !resultData.output_image) {
+    if (!resultImageData) {
         showError('نتیجه‌ای برای دانلود وجود ندارد!');
         return;
     }
     
-    // دانلود تصویر
     const link = document.createElement('a');
     link.download = `result_${Date.now()}.jpg`;
-    link.href = resultData.output_image;
+    link.href = `data:image/jpeg;base64,${resultImageData}`;
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
 }
 
 // ریست کردن
@@ -183,8 +212,10 @@ function resetAll() {
     document.getElementById('resultSection').style.display = 'none';
     document.getElementById('loadingSection').style.display = 'none';
     document.getElementById('fileInput').value = '';
+    document.getElementById('fileInfo').innerHTML = '';
     currentImageData = null;
     resultData = null;
+    resultImageData = null;
     
     // اسکرول به بالا
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -192,10 +223,34 @@ function resetAll() {
 
 // نمایش خطا
 function showError(message) {
-    alert('❌ ' + message);
-}
-
-// تابع کمکی برای نمایش نتیجه (از PyScript استفاده نمیشه دیگه)
-function runDetection() {
-    detectTumor();
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'error-message';
+    errorDiv.innerHTML = `
+        <i class="fas fa-exclamation-circle"></i>
+        <span>${message}</span>
+    `;
+    errorDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #fc8181;
+        color: white;
+        padding: 15px 25px;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(252, 129, 129, 0.4);
+        z-index: 9999;
+        animation: slideDown 0.3s ease;
+        max-width: 400px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    `;
+    
+    document.body.appendChild(errorDiv);
+    
+    setTimeout(() => {
+        errorDiv.style.opacity = '0';
+        errorDiv.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => errorDiv.remove(), 300);
+    }, 5000);
 }

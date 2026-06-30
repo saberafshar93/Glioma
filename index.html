@@ -3,107 +3,122 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تشخیص تومور مغزی - YOLOv8</title>
+    <title>تشخیص تومور مغزی با هوش مصنوعی</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
     <div class="container">
         <!-- هدر -->
         <header>
-            <div class="header-content">
-                <h1>
-                    <i class="fas fa-brain"></i>
-                    تشخیص تومور مغزی
-                </h1>
-                <p>با استفاده از YOLOv8 و هوش مصنوعی</p>
-                <div class="badges">
-                    <span class="badge"><i class="fas fa-tag"></i> YOLOv8</span>
-                    <span class="badge"><i class="fas fa-microscope"></i> 4 کلاس</span>
-                    <span class="badge"><i class="fas fa-check-circle"></i> دقت 95%</span>
-                </div>
+            <div class="logo">
+                <i class="fas fa-brain"></i>
+                <h1>تشخیص تومور مغزی</h1>
+            </div>
+            <p class="subtitle">با دقت ۹۵٪ با استفاده از YOLOv8</p>
+            <div class="status-badge" id="statusBadge">
+                <i class="fas fa-circle"></i>
+                <span>سیستم آماده است</span>
             </div>
         </header>
 
         <!-- بخش آپلود -->
-        <div class="upload-section">
-            <div class="upload-box" id="dropZone">
+        <section class="upload-section">
+            <div class="upload-area" id="dropZone">
                 <i class="fas fa-cloud-upload-alt upload-icon"></i>
-                <h3>تصویر را اینجا بکشید یا کلیک کنید</h3>
-                <p>از انواع تصاویر MRI مغز پشتیبانی می‌کند</p>
-                <div class="upload-formats">
+                <h3>تصویر MRI را آپلود کنید</h3>
+                <p>فایل را بکشید و رها کنید یا کلیک کنید</p>
+                <div class="format-badges">
                     <span>JPG</span>
                     <span>PNG</span>
                     <span>JPEG</span>
+                    <span>BMP</span>
                 </div>
                 <input type="file" id="fileInput" accept="image/*" hidden>
                 <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
                     <i class="fas fa-folder-open"></i> انتخاب تصویر
                 </button>
+                <div class="file-info" id="fileInfo"></div>
             </div>
-        </div>
+        </section>
 
-        <!-- پیش‌نمایش -->
-        <div class="preview-section" id="previewSection" style="display:none;">
-            <div class="preview-container">
-                <div class="preview-image-wrapper">
-                    <h3><i class="fas fa-image"></i> تصویر اصلی</h3>
-                    <img id="originalImage" src="" alt="تصویر اصلی">
+        <!-- بخش پیش‌نمایش -->
+        <section class="preview-section" id="previewSection" style="display:none;">
+            <div class="preview-grid">
+                <div class="image-wrapper">
+                    <h4><i class="fas fa-image"></i> تصویر اصلی</h4>
+                    <div class="image-container">
+                        <img id="originalImage" src="" alt="تصویر اصلی">
+                    </div>
+                    <div class="image-actions">
+                        <button class="btn btn-success" id="detectBtn" onclick="detectTumor()">
+                            <i class="fas fa-microscope"></i> شروع تشخیص
+                        </button>
+                        <button class="btn btn-secondary" onclick="resetAll()">
+                            <i class="fas fa-times"></i> حذف
+                        </button>
+                    </div>
                 </div>
-                <div class="image-info" id="imageInfo">
-                    <p><i class="fas fa-info-circle"></i> برای تشخیص روی دکمه زیر کلیک کنید</p>
+                <div class="image-info">
+                    <div class="info-card">
+                        <i class="fas fa-info-circle"></i>
+                        <div>
+                            <h5>اطلاعات تصویر</h5>
+                            <p id="imageInfoText">در انتظار...</p>
+                        </div>
+                    </div>
                 </div>
+            </div>
+        </section>
+
+        <!-- بخش بارگذاری -->
+        <section class="loading-section" id="loadingSection" style="display:none;">
+            <div class="spinner"></div>
+            <h3>در حال تشخیص...</h3>
+            <p>لطفاً چند ثانیه صبر کنید</p>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </section>
+
+        <!-- بخش نتیجه -->
+        <section class="result-section" id="resultSection" style="display:none;">
+            <div class="result-header">
+                <h3><i class="fas fa-chart-line"></i> نتیجه تشخیص</h3>
+                <span class="result-time" id="resultTime"></span>
             </div>
             
-            <!-- دکمه تشخیص -->
-            <div class="action-section">
-                <button class="btn btn-success" id="detectBtn" onclick="detectTumor()">
-                    <i class="fas fa-microscope"></i> شروع تشخیص
-                </button>
-                <button class="btn btn-secondary" onclick="resetAll()">
-                    <i class="fas fa-redo"></i> تصویر جدید
-                </button>
-            </div>
-        </div>
-
-        <!-- بارگذاری -->
-        <div class="loading-section" id="loadingSection" style="display:none;">
-            <div class="loader"></div>
-            <p>در حال تشخیص...</p>
-            <small>لطفاً صبر کنید</small>
-        </div>
-
-        <!-- نتیجه -->
-        <div class="result-section" id="resultSection" style="display:none;">
-            <h3><i class="fas fa-chart-bar"></i> نتیجه تشخیص</h3>
-            <div class="result-container">
-                <div class="result-image-wrapper">
-                    <h4>تصویر با تشخیص</h4>
-                    <img id="resultImage" src="" alt="نتیجه تشخیص">
+            <div class="result-grid">
+                <div class="result-image">
+                    <h4><i class="fas fa-check-circle"></i> تصویر پردازش‌شده</h4>
+                    <div class="image-container">
+                        <img id="resultImage" src="" alt="نتیجه تشخیص">
+                    </div>
                 </div>
-                <div class="result-details-wrapper">
-                    <h4>جزئیات</h4>
-                    <div id="resultDetails" class="result-details"></div>
+                <div class="result-details">
+                    <div class="detections-list" id="detectionsList">
+                        <!-- نتایج اینجا نمایش داده میشه -->
+                    </div>
+                    <div class="result-actions">
+                        <button class="btn btn-primary" onclick="resetAll()">
+                            <i class="fas fa-plus"></i> تشخیص جدید
+                        </button>
+                        <button class="btn btn-secondary" id="downloadBtn" onclick="downloadResult()">
+                            <i class="fas fa-download"></i> دانلود نتیجه
+                        </button>
+                    </div>
                 </div>
             </div>
-            
-            <div class="action-section">
-                <button class="btn btn-primary" onclick="resetAll()">
-                    <i class="fas fa-plus"></i> تشخیص جدید
-                </button>
-                <button class="btn btn-secondary" onclick="downloadResult()">
-                    <i class="fas fa-download"></i> دانلود نتیجه
-                </button>
-            </div>
-        </div>
+        </section>
 
         <!-- فوتر -->
         <footer>
             <p>ساخته شده با ❤️ با استفاده از YOLOv8 و Flask</p>
-            <div class="footer-links">
-                <a href="#" target="_blank"><i class="fab fa-github"></i></a>
-                <a href="#" target="_blank"><i class="fab fa-linkedin"></i></a>
-                <a href="#" target="_blank"><i class="fab fa-twitter"></i></a>
+            <div class="social-links">
+                <a href="#"><i class="fab fa-github"></i></a>
+                <a href="#"><i class="fab fa-linkedin"></i></a>
+                <a href="#"><i class="fab fa-twitter"></i></a>
             </div>
         </footer>
     </div>
