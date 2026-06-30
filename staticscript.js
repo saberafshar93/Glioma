@@ -61,6 +61,11 @@ function handleFile(file) {
     // ذخیره داده
     currentImageData = file;
     
+    // نمایش پیام آپلود موفق
+    const uploadSuccess = document.getElementById('uploadSuccess');
+    uploadSuccess.style.display = 'block';
+    document.getElementById('uploadMessage').textContent = `✅ فایل "${file.name}" با موفقیت آپلود شد! (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+    
     // نمایش اطلاعات فایل
     const fileInfo = document.getElementById('fileInfo');
     fileInfo.innerHTML = `
@@ -74,7 +79,10 @@ function handleFile(file) {
         document.getElementById('originalImage').src = e.target.result;
         document.getElementById('previewSection').style.display = 'block';
         document.getElementById('resultSection').style.display = 'none';
-        document.getElementById('loadingSection').style.display = 'none';
+        document.getElementById('processingSection').style.display = 'none';
+        
+        // فعال کردن دکمه تشخیص
+        document.getElementById('detectBtn').disabled = false;
         
         // اطلاعات تصویر
         const img = new Image();
@@ -86,6 +94,9 @@ function handleFile(file) {
         
         // اسکرول به بخش پیش‌نمایش
         document.getElementById('previewSection').scrollIntoView({ behavior: 'smooth' });
+        
+        // به‌روزرسانی وضعیت
+        updateStatus('ready', '✅ آماده تشخیص');
     };
     reader.readAsDataURL(file);
 }
@@ -102,9 +113,21 @@ async function detectTumor() {
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> در حال تشخیص...';
     
-    // نمایش بارگذاری
-    document.getElementById('loadingSection').style.display = 'block';
+    // نمایش بخش پردازش
+    document.getElementById('processingSection').style.display = 'block';
     document.getElementById('resultSection').style.display = 'none';
+    document.getElementById('uploadSuccess').style.display = 'none';
+    
+    // به‌روزرسانی وضعیت
+    updateStatus('processing', '🔄 در حال پردازش...');
+    
+    // شروع مراحل پردازش
+    updateStep('step1', 'active');
+    await sleep(500);
+    
+    updateStep('step1', 'done');
+    updateStep('step2', 'active');
+    await sleep(500);
     
     try {
         // ارسال به سرور
@@ -116,23 +139,39 @@ async function detectTumor() {
             body: formData
         });
         
+        updateStep('step2', 'done');
+        updateStep('step3', 'active');
+        await sleep(300);
+        
         const result = await response.json();
         
         if (!result.success) {
             showError(result.error || 'خطا در تشخیص');
+            updateStatus('error', '❌ خطا در تشخیص');
             return;
         }
+        
+        updateStep('step3', 'done');
+        await sleep(300);
         
         // نمایش نتیجه
         displayResult(result);
         
+        // به‌روزرسانی وضعیت
+        updateStatus('success', '✅ تشخیص کامل شد');
+        
     } catch (error) {
         showError('خطا در ارتباط با سرور: ' + error.message);
+        updateStatus('error', '❌ خطا در ارتباط');
     } finally {
         // فعال کردن دکمه
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-microscope"></i> شروع تشخیص';
-        document.getElementById('loadingSection').style.display = 'none';
+        
+        // مخفی کردن بخش پردازش بعد از 1 ثانیه
+        setTimeout(() => {
+            document.getElementById('processingSection').style.display = 'none';
+        }, 1000);
     }
 }
 
@@ -210,15 +249,58 @@ function downloadResult() {
 function resetAll() {
     document.getElementById('previewSection').style.display = 'none';
     document.getElementById('resultSection').style.display = 'none';
-    document.getElementById('loadingSection').style.display = 'none';
+    document.getElementById('processingSection').style.display = 'none';
+    document.getElementById('uploadSuccess').style.display = 'none';
     document.getElementById('fileInput').value = '';
     document.getElementById('fileInfo').innerHTML = '';
     currentImageData = null;
     resultData = null;
     resultImageData = null;
     
+    // غیرفعال کردن دکمه تشخیص
+    document.getElementById('detectBtn').disabled = true;
+    document.getElementById('detectBtn').innerHTML = '<i class="fas fa-microscope"></i> شروع تشخیص';
+    
+    // به‌روزرسانی وضعیت
+    updateStatus('idle', 'سیستم آماده است');
+    
     // اسکرول به بالا
     window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// توابع کمکی
+function updateStatus(type, text) {
+    const badge = document.getElementById('statusBadge');
+    const statusText = document.getElementById('statusText');
+    statusText.textContent = text;
+    
+    badge.style.background = type === 'idle' ? '#48bb78' :
+                            type === 'ready' ? '#48bb78' :
+                            type === 'processing' ? '#f6ad55' :
+                            type === 'success' ? '#48bb78' :
+                            type === 'error' ? '#fc8181' : '#48bb78';
+}
+
+function updateStep(stepId, status) {
+    const step = document.getElementById(stepId);
+    const icon = step.querySelector('i');
+    const text = step.querySelector('span');
+    
+    if (status === 'active') {
+        icon.className = 'fas fa-spinner fa-spin';
+        icon.style.color = '#f6ad55';
+        text.style.color = '#f6ad55';
+        step.style.opacity = '1';
+    } else if (status === 'done') {
+        icon.className = 'fas fa-check-circle';
+        icon.style.color = '#48bb78';
+        text.style.color = '#48bb78';
+        step.style.opacity = '1';
+    }
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 // نمایش خطا
@@ -244,6 +326,7 @@ function showError(message) {
         display: flex;
         align-items: center;
         gap: 10px;
+        font-family: 'Vazirmatn', sans-serif;
     `;
     
     document.body.appendChild(errorDiv);

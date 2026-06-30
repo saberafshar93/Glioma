@@ -19,7 +19,7 @@
             <p class="subtitle">با دقت ۹۵٪ با استفاده از YOLOv8</p>
             <div class="status-badge" id="statusBadge">
                 <i class="fas fa-circle"></i>
-                <span>سیستم آماده است</span>
+                <span id="statusText">سیستم آماده است</span>
             </div>
         </header>
 
@@ -43,6 +43,12 @@
             </div>
         </section>
 
+        <!-- بخش پیام آپلود موفق -->
+        <div id="uploadSuccess" style="display:none; text-align:center; padding:15px; background:#48bb78; color:white; border-radius:10px; margin:10px 0;">
+            <i class="fas fa-check-circle"></i>
+            <span id="uploadMessage">فایل با موفقیت آپلود شد!</span>
+        </div>
+
         <!-- بخش پیش‌نمایش -->
         <section class="preview-section" id="previewSection" style="display:none;">
             <div class="preview-grid">
@@ -52,11 +58,11 @@
                         <img id="originalImage" src="" alt="تصویر اصلی">
                     </div>
                     <div class="image-actions">
-                        <button class="btn btn-success" id="detectBtn" onclick="detectTumor()">
+                        <button class="btn btn-success" id="detectBtn" onclick="detectTumor()" disabled>
                             <i class="fas fa-microscope"></i> شروع تشخیص
                         </button>
                         <button class="btn btn-secondary" onclick="resetAll()">
-                            <i class="fas fa-times"></i> حذف
+                            <i class="fas fa-times"></i> حذف تصویر
                         </button>
                     </div>
                 </div>
@@ -65,20 +71,36 @@
                         <i class="fas fa-info-circle"></i>
                         <div>
                             <h5>اطلاعات تصویر</h5>
-                            <p id="imageInfoText">در انتظار...</p>
+                            <p id="imageInfoText">در انتظار انتخاب تصویر...</p>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- بخش بارگذاری -->
-        <section class="loading-section" id="loadingSection" style="display:none;">
-            <div class="spinner"></div>
-            <h3>در حال تشخیص...</h3>
-            <p>لطفاً چند ثانیه صبر کنید</p>
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill"></div>
+        <!-- بخش پردازش -->
+        <section class="processing-section" id="processingSection" style="display:none;">
+            <div class="processing-overlay">
+                <div class="spinner"></div>
+                <h3>🧠 در حال پردازش...</h3>
+                <p>لطفاً چند ثانیه صبر کنید</p>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="processing-steps">
+                    <div class="step" id="step1">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span>بارگذاری تصویر</span>
+                    </div>
+                    <div class="step" id="step2">
+                        <i class="fas fa-circle"></i>
+                        <span>اجرای مدل YOLOv8</span>
+                    </div>
+                    <div class="step" id="step3">
+                        <i class="fas fa-circle"></i>
+                        <span>پردازش نتایج</span>
+                    </div>
+                </div>
             </div>
         </section>
 
