@@ -1,0 +1,157 @@
+﻿<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تشخیص تومور مغزی با YOLOv8</title>
+    
+    <!-- PyScript -->
+    <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
+    <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- هدر -->
+        <header>
+            <h1><i class="fas fa-brain"></i> تشخیص تومور مغزی</h1>
+            <p>با استفاده از YOLOv8 و هوش مصنوعی</p>
+        </header>
+
+        <!-- بخش آپلود -->
+        <div class="upload-section">
+            <div class="upload-box" id="dropZone">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <p>تصویر خود را اینجا بکشید یا کلیک کنید</p>
+                <input type="file" id="fileInput" accept="image/*" hidden>
+                <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                    <i class="fas fa-folder-open"></i> انتخاب تصویر
+                </button>
+            </div>
+        </div>
+
+        <!-- پیش‌نمایش -->
+        <div class="preview-section" id="previewSection" style="display:none;">
+            <h3><i class="fas fa-image"></i> تصویر اصلی</h3>
+            <img id="originalImage" src="" alt="تصویر اصلی">
+        </div>
+
+        <!-- دکمه تشخیص -->
+        <div class="action-section" id="actionSection" style="display:none;">
+            <button class="btn btn-success" id="detectBtn" onclick="runDetection()">
+                <i class="fas fa-microscope"></i> شروع تشخیص
+            </button>
+        </div>
+
+        <!-- نتیجه -->
+        <div class="result-section" id="resultSection" style="display:none;">
+            <h3><i class="fas fa-chart-bar"></i> نتیجه تشخیص</h3>
+            <div id="resultImage"></div>
+            <div id="resultDetails" class="result-details"></div>
+        </div>
+
+        <!-- PyScript برای اجرای کد پایتون -->
+        <py-script id="pythonCode">
+import asyncio
+import js
+from pyodide import create_proxy
+from js import document, console, FileReader
+import base64
+from PIL import Image
+import io
+import numpy as np
+
+# مدل رو اینجا لود می‌کنیم (اما چون سنگینه، از API استفاده می‌کنیم)
+def detect_tumor(image_data):
+    """
+    تابع تشخیص تومور - اینجا باید کد YOLO رو اجرا کنی
+    ولی چون PyScript سنگینه، بهتره از API استفاده کنی
+    """
+    # این یه نمونه کد ساده هست
+    result = {
+        'detected': True,
+        'tumor_type': 'Glioma',
+        'confidence': 0.95,
+        'bbox': [100, 100, 200, 200]
+    }
+    return result
+
+def process_image(file):
+    """پردازش تصویر آپلود شده"""
+    reader = FileReader.new()
+    
+    def on_load(event):
+        try:
+            # تبدیل به base64
+            img_data = reader.result
+            
+            # تشخیص
+            result = detect_tumor(img_data)
+            
+            # نمایش نتیجه
+            show_result(result, img_data)
+            
+        except Exception as e:
+            console.error(f"خطا: {str(e)}")
+            js.alert(f"خطا در پردازش: {str(e)}")
+    
+    reader.onload = create_proxy(on_load)
+    reader.readAsDataURL(file)
+
+# تابع نمایش نتیجه
+def show_result(result, img_data):
+    result_div = document.getElementById("resultSection")
+    result_div.style.display = "block"
+    
+    # نمایش تصویر با نتیجه
+    img_element = document.createElement("img")
+    img_element.src = img_data
+    result_div.querySelector("#resultImage").appendChild(img_element)
+    
+    # نمایش جزئیات
+    details = document.getElementById("resultDetails")
+    details.innerHTML = f"""
+        <div class="result-card">
+            <div class="result-item">
+                <span class="label">نوع تومور:</span>
+                <span class="value">{result['tumor_type']}</span>
+            </div>
+            <div class="result-item">
+                <span class="label">دقت تشخیص:</span>
+                <span class="value">{result['confidence']*100:.1f}%</span>
+            </div>
+            <div class="result-item">
+                <span class="label">وضعیت:</span>
+                <span class="value badge {'badge-success' if result['detected'] else 'badge-danger'}">
+                    { 'تشخیص داده شد' if result['detected'] else 'تشخیص داده نشد' }
+                </span>
+            </div>
+        </div>
+    """
+
+# اتصال به دکمه
+def setup_buttons():
+    detect_btn = document.getElementById("detectBtn")
+    if detect_btn:
+        detect_btn.onclick = create_proxy(run_detection)
+
+def run_detection():
+    file_input = document.getElementById("fileInput")
+    if file_input.files.length > 0:
+        process_image(file_input.files[0])
+    else:
+        js.alert("لطفاً ابتدا یک تصویر انتخاب کنید!")
+
+# راه‌اندازی
+setup_buttons()
+        </py-script>
+    </div>
+
+    <!-- اسکریپت‌های جاوااسکریپت -->
+    <script src="script.js"></script>
+</body>
+</html>
